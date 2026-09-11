@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión — Pasaporte de Frases</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="boarding-pass">
+    <div class="boarding-pass__top">
+      <p class="eyebrow">Bienvenido de vuelta</p>
+      <h2>Continuar el viaje</h2>
+    </div>
+    <div class="boarding-pass__body">
+      <div id="mensaje" class="mensaje"></div>
+      <form id="form-login">
+        <div class="campo">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email">
+        </div>
+        <div class="campo">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn--coral btn--full">Iniciar sesión</button>
+      </form>
+      <p class="auth-switch">¿No tenés cuenta? <a href="registro.html">Crear una</a></p>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+  document.getElementById('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    await login(email, password);
+  });
+</script>
+
+</body>
+</html>
