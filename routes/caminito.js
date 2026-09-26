@@ -1,9 +1,20 @@
 const express = require('express');
-const router = express.Router();
-const caminitoController = require('../controllers/caminitoController');
-const verificarToken = require('../middleware/auth');
 
-router.get('/:usuarioId/:nivel', verificarToken, caminitoController.obtenerCaminito);
-router.post('/completar', verificarToken, caminitoController.completarEtapa);
+const router = express.Router();
+
+const {
+  obtenerCaminito,
+  completarEtapa
+} = require('../controllers/caminitoController');
+
+router.get(
+  '/:usuarioId/:nivel',
+  obtenerCaminito
+);
+
+router.post(
+  '/completar',
+  completarEtapa
+);
 
 module.exports = router;

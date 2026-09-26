@@ -22,10 +22,163 @@
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
+
   <div class="modal">
-    <p class="eyebrow" id="modal-eyebrow">Etapa</p>
-    <h3 id="modal-frase">Cargando...</h3>
-    <div class="opciones" id="modal-opciones"></div>
+
+    <!-- ========================= -->
+    <!-- PREGUNTA -->
+    <!-- ========================= -->
+
+    <div id="pantalla-pregunta">
+
+      <p class="eyebrow" id="modal-eyebrow">
+        Etapa
+      </p>
+
+      <p
+        id="modal-instruccion"
+        style="margin:0 0 0.7rem; opacity:0.7;">
+      </p>
+
+      <h3 id="modal-frase">
+        Cargando...
+      </h3>
+
+      <div
+        id="modal-pregunta"
+        style="margin:1rem 0; font-size:1rem;">
+      </div>
+
+      <div
+        class="opciones"
+        id="modal-opciones">
+      </div>
+
+      <div
+        id="orden-seleccion"
+        style="margin-top:1rem; font-weight:bold;">
+      </div>
+
+      <button
+        id="orden-confirmar"
+        style="display:none; margin-top:1rem;"
+        class="btn">
+        Comprobar
+      </button>
+
+      <button
+        class="modal__cerrar"
+        id="modal-cerrar">
+        Cerrar
+      </button>
+
+    </div>
+    <!-- ========================= -->
+    <!-- RESULTADO -->
+    <!-- ========================= -->
+
+    <div
+      id="pantalla-resultado"
+      style="display:none;">
+
+      <div
+        id="confeti"
+        class="confeti-container">
+      </div>
+
+      <p
+        class="eyebrow"
+        style="text-align:center;">
+        RESULTADO
+      </p>
+
+      <h2
+        id="resultado-titulo"
+        style="text-align:center;">
+        🎉 ¡Correcto!
+      </h2>
+
+      <div
+        class="resultado-bloque">
+
+        <div class="resultado-etiqueta">
+          🇬🇧 Inglés
+        </div>
+
+        <div
+          id="resultado-ingles"
+          class="resultado-texto">
+        </div>
+
+      </div>
+
+
+      <div
+        class="resultado-bloque">
+
+        <div class="resultado-etiqueta">
+          🇨🇱 Traducción
+        </div>
+
+        <div
+          id="resultado-traduccion"
+          class="resultado-texto">
+        </div>
+
+      </div>
+
+
+      <div
+        class="resultado-bloque">
+
+        <div class="resultado-etiqueta">
+          💡 ¿Por qué?
+        </div>
+
+        <div
+          id="resultado-explicacion"
+          class="resultado-explicacion">
+        </div>
+
+      </div>
+
+
+      <button
+        id="btn-continuar"
+        class="btn btn--primary"
+        style="width:100%; margin-top:1rem;">
+        Continuar →
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+   <p class="eyebrow" id="modal-eyebrow">Etapa</p>
+
+<p id="modal-instruccion"
+   style="margin:0 0 0.7rem; opacity:0.7;">
+</p>
+
+<h3 id="modal-frase">Cargando...</h3>
+
+<div id="modal-pregunta"
+     style="margin:1rem 0; font-size:1rem;">
+</div>
+
+<div class="opciones" id="modal-opciones"></div>
+
+<div id="orden-seleccion"
+     style="margin-top:1rem; font-weight:bold;">
+</div>
+
+<button
+  id="orden-confirmar"
+  style="display:none; margin-top:1rem;"
+  class="btn">
+  Comprobar
+</button>
     <button class="modal__cerrar" id="modal-cerrar">Cerrar</button>
   </div>
 </div>
