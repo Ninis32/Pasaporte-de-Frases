@@ -2,8 +2,6 @@ const Etapa = require('../models/Etapa');
 const Progreso = require('../models/Progreso');
 const Usuario = require('../models/Usuario');
 
-const ETAPAS_POR_NIVEL = 10;
-
 
 // =====================================================
 // OBTENER CAMINITO
@@ -18,8 +16,7 @@ exports.obtenerCaminito = async (req, res) => {
       nivel
     } = req.params;
 
-    const nivelNumero =
-      Number(nivel);
+    const nivelNumero = Number(nivel);
 
 
     if (!usuarioId || !nivelNumero) {
@@ -31,116 +28,110 @@ exports.obtenerCaminito = async (req, res) => {
     }
 
 
-    const etapas =
-      await Etapa.find({
-        nivel: nivelNumero
-      })
+    // =================================================
+    // OBTENER TODAS LAS ETAPAS DEL NIVEL
+    // =================================================
+
+    const etapas = await Etapa.find({
+      nivel: nivelNumero
+    })
       .sort({
         orden: 1
       })
       .lean();
 
 
-    const progresos =
-      await Progreso.find({
-        usuario_id: usuarioId,
-        nivel: nivelNumero
-      })
-      .lean();
+    // =================================================
+    // OBTENER PROGRESO DEL USUARIO
+    // =================================================
+
+    const progresos = await Progreso.find({
+      usuario_id: usuarioId,
+      nivel: nivelNumero
+    }).lean();
 
 
-    const progresoMap =
-      new Map();
+    const progresoMap = new Map();
 
 
-    progresos.forEach(
-      progreso => {
+    progresos.forEach(progreso => {
 
-        progresoMap.set(
-          String(progreso.etapa_id),
-          progreso
-        );
+      progresoMap.set(
+        String(progreso.etapa_id),
+        progreso
+      );
 
-      }
-    );
+    });
 
 
-    const caminito =
-      etapas.map(
-        (etapa, index) => {
+    // =================================================
+    // CONSTRUIR CAMINITO
+    // =================================================
 
-          const progreso =
+    const caminito = etapas.map(
+      (etapa, index) => {
+
+        const progreso =
+          progresoMap.get(
+            String(etapa._id)
+          );
+
+
+        let estado = 'bloqueada';
+
+
+        // -------------------------------------------------
+        // PRIMERA ETAPA
+        // -------------------------------------------------
+
+        if (index === 0) {
+
+          estado =
+            progreso?.completado
+              ? 'completada'
+              : 'disponible';
+
+        }
+
+
+        // -------------------------------------------------
+        // RESTO DE ETAPAS
+        // -------------------------------------------------
+
+        else {
+
+          const anterior =
+            etapas[index - 1];
+
+
+          const progresoAnterior =
             progresoMap.get(
-              String(etapa._id)
+              String(anterior._id)
             );
 
 
-          let estado =
-            'bloqueada';
-
-
-          if (index === 0) {
+          if (
+            progresoAnterior &&
+            progresoAnterior.completado
+          ) {
 
             estado =
               progreso?.completado
                 ? 'completada'
                 : 'disponible';
 
-          } else {
-
-            const anterior =
-              etapas[index - 1];
-
-
-            const progresoAnterior =
-              progresoMap.get(
-                String(anterior._id)
-              );
-
-
-            if (
-              progresoAnterior &&
-              progresoAnterior.completado
-            ) {
-
-              estado =
-                progreso?.completado
-                  ? 'completada'
-                  : 'disponible';
-
-            }
-
           }
 
+        }
 
-          if (
-            estado === 'bloqueada'
-          ) {
 
-            return {
+        // -------------------------------------------------
+        // ETAPA BLOQUEADA
+        // -------------------------------------------------
 
-              etapa_id:
-                etapa._id,
-
-              orden:
-                etapa.orden,
-
-              nombre:
-                etapa.nombre,
-
-              descripcion:
-                etapa.descripcion,
-
-              estado,
-
-              frases: [],
-
-              ejercicios: []
-
-            };
-
-          }
-
+        if (
+          estado === 'bloqueada'
+        ) {
 
           return {
 
@@ -158,57 +149,105 @@ exports.obtenerCaminito = async (req, res) => {
 
             estado,
 
-            frases:
-              etapa.frases || [],
+            frases: [],
 
-            ejercicios:
-              etapa.ejercicios || [],
+            ejercicios: [],
 
-            desafio:
-              etapa.desafio || null,
-
-            // Campos antiguos
-            tipo:
-              etapa.tipo,
-
-            instruccion:
-              etapa.instruccion,
-
-            pregunta:
-              etapa.pregunta,
-
-            frase_ingles:
-              etapa.frase_ingles,
-
-            frase_traduccion:
-              etapa.frase_traduccion,
-
-            opciones:
-              etapa.opciones || [],
-
-            explicacion:
-              etapa.explicacion || '',
-
-            dificultad:
-              etapa.dificultad
+            desafio: null
 
           };
 
         }
-      );
 
 
-    const completadas =
-      progresos.filter(
-        p =>
-          p.completado === true
-      ).length;
+        // -------------------------------------------------
+        // ETAPA DISPONIBLE / COMPLETADA
+        // -------------------------------------------------
 
+        return {
+
+          etapa_id:
+            etapa._id,
+
+          orden:
+            etapa.orden,
+
+          nombre:
+            etapa.nombre,
+
+          descripcion:
+            etapa.descripcion,
+
+          estado,
+
+          frases:
+            etapa.frases || [],
+
+          ejercicios:
+            etapa.ejercicios || [],
+
+          desafio:
+            etapa.desafio || null,
+
+
+          // =============================================
+          // COMPATIBILIDAD CON NIVEL 1 ANTIGUO
+          // =============================================
+
+          tipo:
+            etapa.tipo,
+
+          instruccion:
+            etapa.instruccion,
+
+          pregunta:
+            etapa.pregunta,
+
+          frase_ingles:
+            etapa.frase_ingles,
+
+          frase_traduccion:
+            etapa.frase_traduccion,
+
+          opciones:
+            etapa.opciones || [],
+
+          respuesta_correcta:
+            etapa.respuesta_correcta || '',
+
+          explicacion:
+            etapa.explicacion || '',
+
+          dificultad:
+            etapa.dificultad
+
+        };
+
+      }
+    );
+
+
+    // =================================================
+    // COMPROBAR SI EL NIVEL ESTÁ COMPLETO
+    // =================================================
 
     const nivelCompleto =
-      completadas >=
-      ETAPAS_POR_NIVEL;
+      etapas.length > 0 &&
+      etapas.every(etapa => {
 
+        const progreso =
+          progresoMap.get(
+            String(etapa._id)
+          );
+
+        return progreso?.completado === true;
+
+      });
+
+
+    // =================================================
+    // OBTENER USUARIO
+    // =================================================
 
     const usuario =
       await Usuario.findById(
@@ -218,14 +257,65 @@ exports.obtenerCaminito = async (req, res) => {
       );
 
 
+    if (!usuario) {
+
+      return res.status(404).json({
+        error: 'Usuario no encontrado'
+      });
+
+    }
+
+
+    let nivelActual =
+      usuario.nivel_actual || 1;
+
+
+    // =================================================
+    // SINCRONIZAR NIVEL
+    //
+    // Si el usuario ya había terminado el nivel,
+    // avanzamos automáticamente al siguiente.
+    // =================================================
+
+    if (
+      nivelCompleto &&
+      nivelNumero === nivelActual
+    ) {
+
+      const siguienteNivelExiste =
+        await Etapa.exists({
+          nivel: nivelNumero + 1
+        });
+
+
+      if (siguienteNivelExiste) {
+
+        usuario.nivel_actual =
+          nivelNumero + 1;
+
+        await usuario.save();
+
+        nivelActual =
+          nivelNumero + 1;
+
+      }
+
+    }
+
+
+    // =================================================
+    // RESPUESTA
+    // =================================================
+
     res.json({
 
       nivel:
         nivelNumero,
 
-      nivelActual:
-        usuario?.nivel_actual ||
-        nivelNumero,
+      nivelActual,
+
+      totalEtapas:
+        etapas.length,
 
       caminito,
 
@@ -295,6 +385,10 @@ exports.completarEtapa = async (
     }
 
 
+    // =================================================
+    // BUSCAR ETAPA
+    // =================================================
+
     const etapa =
       await Etapa.findById(
         etapaId
@@ -322,6 +416,7 @@ exports.completarEtapa = async (
 
 
     if (
+      !Number.isInteger(indice) ||
       !ejercicios[indice]
     ) {
 
@@ -339,6 +434,10 @@ exports.completarEtapa = async (
       ejercicios[indice];
 
 
+    // =================================================
+    // COMPARAR RESPUESTA
+    // =================================================
+
     const respuestaUsuario =
       String(respuesta)
         .trim()
@@ -349,8 +448,8 @@ exports.completarEtapa = async (
       String(
         ejercicio.respuesta_correcta
       )
-      .trim()
-      .toLowerCase();
+        .trim()
+        .toLowerCase();
 
 
     const correcta =
@@ -359,7 +458,7 @@ exports.completarEtapa = async (
 
 
     // =================================================
-    // PROGRESO
+    // BUSCAR / CREAR PROGRESO
     // =================================================
 
     let progreso =
@@ -413,7 +512,7 @@ exports.completarEtapa = async (
 
 
     // =================================================
-    // INCORRECTO
+    // RESPUESTA INCORRECTA
     // =================================================
 
     if (!correcta) {
@@ -454,25 +553,27 @@ exports.completarEtapa = async (
     }
 
 
-    // Siguiente ejercicio
     progreso.ejercicio_actual =
       indice + 1;
 
 
+    // =================================================
+    // COMPROBAR ETAPA COMPLETA
+    // =================================================
+
     const etapaCompleta =
+      ejercicios.length > 0 &&
       progreso.ejercicios_completados.length >=
       ejercicios.length;
 
 
-    let nivelCompleto =
-      false;
-
+    let nivelCompleto = false;
 
     let nivelActual;
 
 
     // =================================================
-    // ETAPA COMPLETADA
+    // SI TERMINÓ TODA LA ETAPA
     // =================================================
 
     if (etapaCompleta) {
@@ -480,9 +581,27 @@ exports.completarEtapa = async (
       progreso.completado =
         true;
 
+
       progreso.fecha_completado =
         new Date();
 
+
+      // ===============================================
+      // CUÁNTAS ETAPAS TIENE REALMENTE EL NIVEL
+      // ===============================================
+
+      const totalEtapasNivel =
+        await Etapa.countDocuments({
+
+          nivel:
+            etapa.nivel
+
+        });
+
+
+      // ===============================================
+      // CUÁNTAS HA COMPLETADO EL USUARIO
+      // ===============================================
 
       const etapasCompletadas =
         await Progreso.countDocuments({
@@ -500,9 +619,14 @@ exports.completarEtapa = async (
 
 
       nivelCompleto =
+        totalEtapasNivel > 0 &&
         etapasCompletadas >=
-        ETAPAS_POR_NIVEL;
+        totalEtapasNivel;
 
+
+      // ===============================================
+      // USUARIO
+      // ===============================================
 
       const usuario =
         await Usuario.findById(
@@ -526,24 +650,46 @@ exports.completarEtapa = async (
         usuario.nivel_actual || 1;
 
 
-      // Solo avanzar si terminó
-      // el nivel que está cursando
+      // ===============================================
+      // AVANZAR AL SIGUIENTE NIVEL
+      // ===============================================
+
       if (
         nivelCompleto &&
         etapa.nivel === nivelActual
       ) {
 
-        nivelActual += 1;
+        const siguienteNivelExiste =
+          await Etapa.exists({
 
-        usuario.nivel_actual =
-          nivelActual;
+            nivel:
+              etapa.nivel + 1
 
-        await usuario.save();
+          });
+
+
+        if (siguienteNivelExiste) {
+
+          nivelActual =
+            etapa.nivel + 1;
+
+
+          usuario.nivel_actual =
+            nivelActual;
+
+
+          await usuario.save();
+
+        }
 
       }
 
     }
 
+
+    // =================================================
+    // GUARDAR PROGRESO
+    // =================================================
 
     await progreso.save();
 

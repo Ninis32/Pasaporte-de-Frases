@@ -1,105 +1,345 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tu camino — Pasaporte de Frases</title>
-<link rel="stylesheet" href="css/style.css">
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Tu camino — Pasaporte de Frases
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="css/style.css"
+  >
+
 </head>
+
+
 <body>
 
-<div class="top-bar">
-  <div class="nav__brand"><span class="nav__brand-mark">PF</span> Pasaporte de Frases</div>
-  <div style="display:flex; align-items:center; gap:0.8rem;">
-    <span class="nivel-badge" id="badge-nivel">Nivel 1</span>
-    <span class="xp-badge" id="badge-nombre"></span>
-    <button class="btn btn--ghost" style="padding:0.4rem 0.9rem; font-size:0.85rem;" onclick="cerrarSesion()">Salir</button>
+
+<header class="top-bar">
+
+  <div class="nav__brand">
+
+    <span class="nav__brand-mark">
+      PF
+    </span>
+
+    Pasaporte de Frases
+
   </div>
-</div>
 
-<div class="trail-wrap" id="trail-wrap">
-  <!-- Las paradas se generan dinámicamente por JS con el nodo interactivo -->
-</div>
 
-<div class="modal-overlay" id="modal-overlay">
+  <div
+    style="
+      display:flex;
+      align-items:center;
+      gap:0.8rem;
+    "
+  >
+
+    <span
+      class="nivel-badge"
+      id="badge-nivel"
+    >
+      Nivel 1
+    </span>
+
+
+    <span
+      class="xp-badge"
+      id="badge-nombre"
+    >
+    </span>
+
+
+    <button
+      class="btn btn--ghost"
+      style="
+        padding:0.4rem 0.9rem;
+        font-size:0.85rem;
+      "
+      onclick="cerrarSesion()"
+    >
+      Salir
+    </button>
+
+  </div>
+
+</header>
+
+
+
+<main>
+
+
+  <!-- ========================================= -->
+  <!-- INTRODUCCIÓN -->
+  <!-- ========================================= -->
+
+  <section
+    class="caminito-intro"
+    style="
+      text-align:center;
+      padding:2rem 1rem 1rem;
+    "
+  >
+
+    <p class="eyebrow">
+      TU CAMINO
+    </p>
+
+
+    <h1>
+      Aprende inglés paso a paso
+    </h1>
+
+
+    <p>
+      Completa cada etapa para desbloquear la siguiente.
+    </p>
+
+  </section>
+
+
+
+  <!-- ========================================= -->
+  <!-- CAMINITO -->
+  <!-- ========================================= -->
+
+  <div
+    class="trail-wrap"
+    id="trail-wrap"
+  >
+
+    <p style="text-align:center;">
+      Cargando tu caminito...
+    </p>
+
+  </div>
+
+</main>
+
+
+
+<!-- ========================================= -->
+<!-- MODAL -->
+<!-- ========================================= -->
+
+<div
+  class="modal-overlay"
+  id="modal-overlay"
+>
+
 
   <div class="modal">
 
-    <!-- ========================= -->
-    <!-- PREGUNTA -->
-    <!-- ========================= -->
 
-    <div id="pantalla-pregunta">
-
-      <p class="eyebrow" id="modal-eyebrow">
-        Etapa
-      </p>
-
-      <p
-        id="modal-instruccion"
-        style="margin:0 0 0.7rem; opacity:0.7;">
-      </p>
-
-      <h3 id="modal-frase">
-        Cargando...
-      </h3>
-
-      <div
-        id="modal-pregunta"
-        style="margin:1rem 0; font-size:1rem;">
-      </div>
-
-      <div
-        class="opciones"
-        id="modal-opciones">
-      </div>
-
-      <div
-        id="orden-seleccion"
-        style="margin-top:1rem; font-weight:bold;">
-      </div>
-
-      <button
-        id="orden-confirmar"
-        style="display:none; margin-top:1rem;"
-        class="btn">
-        Comprobar
-      </button>
-
-      <button
-        class="modal__cerrar"
-        id="modal-cerrar">
-        Cerrar
-      </button>
-
-    </div>
-    <!-- ========================= -->
-    <!-- RESULTADO -->
-    <!-- ========================= -->
+    <!-- ======================================= -->
+    <!-- PANTALLA DE PREGUNTA -->
+    <!-- ======================================= -->
 
     <div
-      id="pantalla-resultado"
-      style="display:none;">
+      id="pantalla-pregunta"
+    >
 
-      <div
-        id="confeti"
-        class="confeti-container">
-      </div>
 
       <p
         class="eyebrow"
-        style="text-align:center;">
+        id="modal-eyebrow"
+      >
+        Etapa
+      </p>
+
+
+      <h2
+        id="modal-titulo"
+        style="margin-bottom:0.4rem;"
+      >
+      </h2>
+
+
+      <p
+        id="modal-descripcion"
+        style="
+          margin:0 0 1rem;
+          opacity:0.75;
+        "
+      >
+      </p>
+
+
+
+      <!-- ===================================== -->
+      <!-- FRASES QUE APRENDERÁ -->
+      <!-- ===================================== -->
+
+      <div
+        id="frases-aprendizaje"
+        style="margin-bottom:1.2rem;"
+      >
+      </div>
+
+
+
+      <!-- ===================================== -->
+      <!-- PROGRESO -->
+      <!-- ===================================== -->
+
+      <p
+        id="modal-progreso"
+        style="
+          font-size:0.85rem;
+          opacity:0.65;
+        "
+      >
+      </p>
+
+
+
+      <!-- ===================================== -->
+      <!-- INSTRUCCIÓN -->
+      <!-- ===================================== -->
+
+      <p
+        id="modal-instruccion"
+        style="
+          margin:0 0 0.7rem;
+          opacity:0.8;
+        "
+      >
+      </p>
+
+
+
+      <!-- ===================================== -->
+      <!-- FRASE -->
+      <!-- ===================================== -->
+
+      <h3
+        id="modal-frase"
+      >
+        Cargando...
+      </h3>
+
+
+
+      <!-- ===================================== -->
+      <!-- PREGUNTA -->
+      <!-- ===================================== -->
+
+      <div
+        id="modal-pregunta"
+        style="
+          margin:1rem 0;
+          font-size:1rem;
+        "
+      >
+      </div>
+
+
+
+      <!-- ===================================== -->
+      <!-- OPCIONES -->
+      <!-- ===================================== -->
+
+      <div
+        class="opciones"
+        id="modal-opciones"
+      >
+      </div>
+
+
+
+      <!-- ===================================== -->
+      <!-- ORDENAR PALABRAS -->
+      <!-- ===================================== -->
+
+      <div
+        id="orden-seleccion"
+        style="
+          margin-top:1rem;
+          font-weight:bold;
+        "
+      >
+      </div>
+
+
+
+      <button
+        id="orden-confirmar"
+        style="
+          display:none;
+          margin-top:1rem;
+        "
+        class="btn btn--primary"
+      >
+        Comprobar
+      </button>
+
+
+
+      <!-- ===================================== -->
+      <!-- CERRAR -->
+      <!-- ===================================== -->
+
+      <button
+        class="modal__cerrar"
+        id="modal-cerrar"
+      >
+        Cerrar
+      </button>
+
+
+    </div>
+
+
+
+    <!-- ======================================= -->
+    <!-- PANTALLA DE RESULTADO -->
+    <!-- ======================================= -->
+
+    <div
+      id="pantalla-resultado"
+      style="display:none;"
+    >
+
+
+      <div
+        id="confeti"
+        class="confeti-container"
+      >
+      </div>
+
+
+      <p
+        class="eyebrow"
+        style="text-align:center;"
+      >
         RESULTADO
       </p>
 
+
       <h2
         id="resultado-titulo"
-        style="text-align:center;">
+        style="text-align:center;"
+      >
         🎉 ¡Correcto!
       </h2>
 
-      <div
-        class="resultado-bloque">
+
+
+      <!-- INGLÉS -->
+
+      <div class="resultado-bloque">
 
         <div class="resultado-etiqueta">
           🇬🇧 Inglés
@@ -107,14 +347,17 @@
 
         <div
           id="resultado-ingles"
-          class="resultado-texto">
+          class="resultado-texto"
+        >
         </div>
 
       </div>
 
 
-      <div
-        class="resultado-bloque">
+
+      <!-- TRADUCCIÓN -->
+
+      <div class="resultado-bloque">
 
         <div class="resultado-etiqueta">
           🇨🇱 Traducción
@@ -122,14 +365,17 @@
 
         <div
           id="resultado-traduccion"
-          class="resultado-texto">
+          class="resultado-texto"
+        >
         </div>
 
       </div>
 
 
-      <div
-        class="resultado-bloque">
+
+      <!-- EXPLICACIÓN -->
+
+      <div class="resultado-bloque">
 
         <div class="resultado-etiqueta">
           💡 ¿Por qué?
@@ -137,54 +383,46 @@
 
         <div
           id="resultado-explicacion"
-          class="resultado-explicacion">
+          class="resultado-explicacion"
+        >
         </div>
 
       </div>
 
 
+
+      <!-- CONTINUAR -->
+
       <button
         id="btn-continuar"
         class="btn btn--primary"
-        style="width:100%; margin-top:1rem;">
+        style="
+          width:100%;
+          margin-top:1rem;
+        "
+      >
         Continuar →
       </button>
 
+
     </div>
 
+
   </div>
 
 </div>
-   <p class="eyebrow" id="modal-eyebrow">Etapa</p>
 
-<p id="modal-instruccion"
-   style="margin:0 0 0.7rem; opacity:0.7;">
-</p>
 
-<h3 id="modal-frase">Cargando...</h3>
 
-<div id="modal-pregunta"
-     style="margin:1rem 0; font-size:1rem;">
-</div>
-
-<div class="opciones" id="modal-opciones"></div>
-
-<div id="orden-seleccion"
-     style="margin-top:1rem; font-weight:bold;">
-</div>
-
-<button
-  id="orden-confirmar"
-  style="display:none; margin-top:1rem;"
-  class="btn">
-  Comprobar
-</button>
-    <button class="modal__cerrar" id="modal-cerrar">Cerrar</button>
-  </div>
-</div>
+<!-- ========================================= -->
+<!-- JAVASCRIPT -->
+<!-- ========================================= -->
 
 <script src="js/auth.js"></script>
+
 <script src="js/caminito.js"></script>
 
+
 </body>
+
 </html>

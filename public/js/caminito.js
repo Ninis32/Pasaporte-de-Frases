@@ -1,23 +1,62 @@
 const { token, usuario } = obtenerSesion();
 
-if (!token) {
-  window.location.href = 'login.html';
+
+if (!token || !usuario) {
+
+  window.location.href =
+    'login.html';
+
+  throw new Error(
+    'Sesión no encontrada'
+  );
+
 }
 
-let nivelActual = (usuario && usuario.nivel_actual) || 1;
-let etapaSeleccionada = null;
-let palabrasSeleccionadas = [];
+
+// =====================================================
+// VARIABLES
+// =====================================================
+
+let nivelActual =
+  Number(usuario.nivel_actual) || 1;
+
+
+let etapasActuales = [];
+
+
+let etapaSeleccionada =
+  null;
+
+
+let ejercicioActual =
+  0;
+
+
+let palabrasSeleccionadas =
+  [];
+
+
+
+// =====================================================
+// ATAJO PARA ELEMENTOS HTML
+// =====================================================
+
+const $ = id =>
+  document.getElementById(id);
+
 
 
 // =====================================================
 // INFORMACIÓN DEL USUARIO
 // =====================================================
 
-document.getElementById('badge-nombre').textContent =
-  usuario ? usuario.nombre : '';
+$('badge-nombre').textContent =
+  usuario.nombre || '';
 
-document.getElementById('badge-nivel').textContent =
+
+$('badge-nivel').textContent =
   `Nivel ${nivelActual}`;
+
 
 
 // =====================================================
@@ -25,26 +64,87 @@ document.getElementById('badge-nivel').textContent =
 // =====================================================
 
 async function cargarCaminito() {
-  try {
-    const resp = await fetch(
-      `/api/caminito/${usuario.id}/${nivelActual}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
 
-    if (resp.status === 401) {
-      return cerrarSesion();
+  try {
+
+    const resp =
+      await fetch(
+        `/api/caminito/${usuario.id}/${nivelActual}`,
+        {
+          headers: {
+
+            Authorization:
+              `Bearer ${token}`
+
+          }
+
+        }
+      );
+
+
+    if (
+      resp.status === 401
+    ) {
+
+      cerrarSesion();
+
+      return;
+
     }
 
-    const data = await resp.json();
+
+    const data =
+      await resp.json();
+
+
+    if (!resp.ok) {
+
+      throw new Error(
+        data.error ||
+        'No se pudo cargar el caminito'
+      );
+
+    }
+
+
+    // ===============================================
+    // ACTUALIZAR NIVEL SI EL SERVIDOR LO CAMBIÓ
+    // ===============================================
+
+    if (
+      data.nivelActual &&
+      data.nivelActual !== nivelActual
+    ) {
+
+      nivelActual =
+        Number(data.nivelActual);
+
+
+      usuario.nivel_actual =
+        nivelActual;
+
+
+      localStorage.setItem(
+        'usuario',
+        JSON.stringify(usuario)
+      );
+
+
+      $('badge-nivel').textContent =
+        `Nivel ${nivelActual}`;
+
+    }
+
+
+    etapasActuales =
+      data.caminito || [];
+
 
     renderizarTrail(
-      data.caminito,
+      etapasActuales,
       data.nivelCompleto
     );
+
 
   } catch (error) {
 
@@ -53,231 +153,752 @@ async function cargarCaminito() {
       error
     );
 
-    document.getElementById('trail-wrap').innerHTML =
-      '<p style="text-align:center;">No se pudo conectar con el servidor.</p>';
+
+    $('trail-wrap').innerHTML =
+      `
+      <p style="text-align:center;">
+        No se pudo conectar con el servidor.
+      </p>
+      `;
+
   }
+
 }
 
 
-// =====================================================
-// MOSTRAR LAS ETAPAS
-// =====================================================
-
-function renderizarTrail(etapas, nivelCompleto) {
-
-  const wrap = document.getElementById('trail-wrap');
-
-  wrap.innerHTML = '';
-
-  etapas.forEach((etapa) => {
-
-    const parada = document.createElement('div');
-
-    parada.className = 'parada';
-
-
-    const nodo = document.createElement('button');
-
-    nodo.className =
-      `parada__nodo ${etapa.estado}`;
-
-    nodo.textContent =
-      etapa.orden;
-
-    nodo.setAttribute(
-      'aria-label',
-      `Etapa ${etapa.orden}, ${etapa.estado}`
-    );
-
-    nodo.disabled =
-      etapa.estado === 'bloqueada';
-
-
-    if (etapa.estado !== 'bloqueada') {
-
-      nodo.addEventListener(
-        'click',
-        () => abrirReto(etapa)
-      );
-
-    }
-
-
-    parada.appendChild(nodo);
-
-    wrap.appendChild(parada);
-
-  });
-
-
-  if (nivelCompleto) {
-
-    const meta = document.createElement('div');
-
-    meta.className = 'meta-final';
-
-    meta.textContent =
-      `¡Nivel ${nivelActual} completo!`;
-
-    wrap.appendChild(meta);
-
-  }
-}
-
 
 // =====================================================
-// ABRIR RETO
+// MOSTRAR CAMINITO
 // =====================================================
 
-function abrirReto(etapa) {
+function renderizarTrail(
+  etapas,
+  nivelCompleto
+) {
 
-  etapaSeleccionada = etapa;
-
-  // Limpiar respuestas anteriores
-  palabrasSeleccionadas = [];
-
-
-  // Mostrar pantalla de pregunta
-  document.getElementById(
-    'pantalla-pregunta'
-  ).style.display = 'block';
+  const wrap =
+    $('trail-wrap');
 
 
-  // Ocultar resultado anterior
-  document.getElementById(
-    'pantalla-resultado'
-  ).style.display = 'none';
-
-
-  // Encabezado
-  document.getElementById(
-    'modal-eyebrow'
-  ).textContent =
-    `Etapa ${etapa.orden} · Nivel ${nivelActual}`;
-
-
-  // Instrucción
-  document.getElementById(
-    'modal-instruccion'
-  ).textContent =
-    etapa.instruccion ||
-    'Responde correctamente';
-
-
-  // Pregunta
-  document.getElementById(
-    'modal-frase'
-  ).textContent =
-    etapa.pregunta ||
-    etapa.frase_ingles ||
+  wrap.innerHTML =
     '';
 
 
-  // Limpiar alternativas
-  const cont =
-    document.getElementById(
-      'modal-opciones'
-    );
+  if (!etapas.length) {
 
-  cont.innerHTML = '';
+    wrap.innerHTML =
+      `
+      <p style="text-align:center;">
+        Todavía no hay etapas cargadas
+        para este nivel.
+      </p>
+      `;
 
-
-  // Limpiar frase ordenada
-  const seleccion =
-    document.getElementById(
-      'orden-seleccion'
-    );
-
-  if (seleccion) {
-
-    seleccion.textContent = '';
+    return;
 
   }
 
 
-  // Ocultar botón comprobar
-  const confirmar =
-    document.getElementById(
-      'orden-confirmar'
-    );
+  etapas.forEach(
+    etapa => {
 
-  if (confirmar) {
-
-    confirmar.style.display = 'none';
-
-    confirmar.disabled = false;
-
-  }
+      const parada =
+        document.createElement(
+          'div'
+        );
 
 
-  // Crear tipo de ejercicio
-  if (etapa.tipo === 'ordenar') {
-
-    crearEjercicioOrdenar(etapa);
-
-  } else {
-
-    crearOpcionesNormales(etapa);
-
-  }
+      parada.className =
+        'parada';
 
 
-  // Mostrar modal
-  document.getElementById(
-    'modal-overlay'
-  ).classList.add('activo');
-}
+
+      // =========================================
+      // NODO
+      // =========================================
+
+      const nodo =
+        document.createElement(
+          'button'
+        );
 
 
-// =====================================================
-// OPCIONES NORMALES
-// =====================================================
-
-function crearOpcionesNormales(etapa) {
-
-  const cont =
-    document.getElementById(
-      'modal-opciones'
-    );
+      nodo.className =
+        `parada__nodo ${etapa.estado}`;
 
 
-  // Copiar opciones para NO modificar
-  // las opciones originales de MongoDB
-  const opcionesMezcladas =
-    [...etapa.opciones];
+      nodo.textContent =
+        etapa.orden;
 
 
-  // ===================================================
-  // MEZCLAR ALEATORIAMENTE
-  // Algoritmo Fisher-Yates
-  // ===================================================
-
-  for (
-    let i = opcionesMezcladas.length - 1;
-    i > 0;
-    i--
-  ) {
-
-    const j =
-      Math.floor(
-        Math.random() * (i + 1)
+      nodo.setAttribute(
+        'aria-label',
+        `Etapa ${etapa.orden}: ${
+          etapa.nombre || ''
+        }`
       );
 
 
-    [
-      opcionesMezcladas[i],
-      opcionesMezcladas[j]
-    ] = [
-      opcionesMezcladas[j],
-      opcionesMezcladas[i]
-    ];
+      nodo.disabled =
+        etapa.estado ===
+        'bloqueada';
+
+
+
+      if (
+        etapa.estado !==
+        'bloqueada'
+      ) {
+
+        nodo.addEventListener(
+          'click',
+          () =>
+            abrirEtapa(etapa)
+        );
+
+      }
+
+
+
+      // =========================================
+      // NOMBRE
+      // =========================================
+
+      const titulo =
+        document.createElement(
+          'div'
+        );
+
+
+      titulo.style.textAlign =
+        'center';
+
+
+      titulo.style.marginTop =
+        '0.4rem';
+
+
+      titulo.style.fontWeight =
+        '600';
+
+
+      titulo.textContent =
+        etapa.nombre ||
+        `Etapa ${etapa.orden}`;
+
+
+
+      // =========================================
+      // ESTADO
+      // =========================================
+
+      const estado =
+        document.createElement(
+          'small'
+        );
+
+
+      estado.style.display =
+        'block';
+
+
+      estado.style.textAlign =
+        'center';
+
+
+      estado.style.opacity =
+        '0.65';
+
+
+      estado.textContent =
+
+        etapa.estado ===
+        'completada'
+
+          ? '✓ Completada'
+
+          : etapa.estado ===
+            'disponible'
+
+            ? 'Disponible'
+
+            : '🔒 Bloqueada';
+
+
+
+      parada.appendChild(
+        nodo
+      );
+
+
+      parada.appendChild(
+        titulo
+      );
+
+
+      parada.appendChild(
+        estado
+      );
+
+
+      wrap.appendChild(
+        parada
+      );
+
+    }
+  );
+
+
+
+  // ===============================================
+  // NIVEL COMPLETO
+  // ===============================================
+
+  if (nivelCompleto) {
+
+    const meta =
+      document.createElement(
+        'div'
+      );
+
+
+    meta.className =
+      'meta-final';
+
+
+    meta.textContent =
+      `🎉 ¡Nivel ${nivelActual} completo!`;
+
+
+    wrap.appendChild(
+      meta
+    );
+
+  }
+
+}
+
+
+
+// =====================================================
+// ABRIR ETAPA
+// =====================================================
+
+function abrirEtapa(
+  etapa
+) {
+
+  etapaSeleccionada =
+    normalizarEtapa(etapa);
+
+
+  ejercicioActual =
+    0;
+
+
+  palabrasSeleccionadas =
+    [];
+
+
+  $('pantalla-pregunta')
+    .style.display =
+    'block';
+
+
+  $('pantalla-resultado')
+    .style.display =
+    'none';
+
+
+  $('modal-overlay')
+    .classList.add(
+      'activo'
+    );
+
+
+
+  // ===============================================
+  // ENCABEZADO
+  // ===============================================
+
+  $('modal-eyebrow')
+    .textContent =
+    `ETAPA ${etapa.orden} · NIVEL ${nivelActual}`;
+
+
+  $('modal-titulo')
+    .textContent =
+    etapa.nombre ||
+    `Etapa ${etapa.orden}`;
+
+
+  $('modal-descripcion')
+    .textContent =
+    etapa.descripcion ||
+    '';
+
+
+
+  // ===============================================
+  // FRASES
+  // ===============================================
+
+  mostrarFrases(
+    etapa.frases || []
+  );
+
+
+
+  // ===============================================
+  // PRIMER EJERCICIO
+  // ===============================================
+
+  mostrarEjercicio();
+
+}
+
+
+
+// =====================================================
+// NORMALIZAR ETAPA ANTIGUA
+// =====================================================
+
+function normalizarEtapa(
+  etapa
+) {
+
+  // ===============================================
+  // NUEVO SISTEMA
+  // ===============================================
+
+  if (
+    Array.isArray(
+      etapa.ejercicios
+    ) &&
+    etapa.ejercicios.length
+  ) {
+
+    return etapa;
 
   }
 
 
-  // Crear botones
-  opcionesMezcladas.forEach(
-    (opcion) => {
+
+  // ===============================================
+  // SISTEMA ANTIGUO
+  // ===============================================
+
+  const ejercicio = {
+
+    tipo:
+      etapa.tipo ||
+      'seleccion',
+
+    instruccion:
+      etapa.instruccion ||
+      'Responde correctamente',
+
+    pregunta:
+      etapa.pregunta ||
+      etapa.frase_ingles ||
+      '',
+
+    frase_ingles:
+      etapa.frase_ingles ||
+      '',
+
+    frase_traduccion:
+      etapa.frase_traduccion ||
+      '',
+
+    opciones:
+      etapa.opciones ||
+      [],
+
+    respuesta_correcta:
+      etapa.respuesta_correcta ||
+      '',
+
+    explicacion:
+      etapa.explicacion ||
+      ''
+
+  };
+
+
+
+  return {
+
+    ...etapa,
+
+    frases:
+
+      etapa.frase_ingles
+
+        ? [
+            {
+              ingles:
+                etapa.frase_ingles,
+
+              traduccion:
+                etapa.frase_traduccion ||
+                '',
+
+              explicacion:
+                etapa.explicacion ||
+                '',
+
+              pronunciacion:
+                ''
+            }
+          ]
+
+        : [],
+
+
+    ejercicios:
+      [
+        ejercicio
+      ]
+
+  };
+
+}
+
+
+
+// =====================================================
+// MOSTRAR FRASES DE LA ETAPA
+// =====================================================
+
+function mostrarFrases(
+  frases
+) {
+
+  const cont =
+    $('frases-aprendizaje');
+
+
+  cont.innerHTML =
+    '';
+
+
+  if (!frases.length) {
+
+    return;
+
+  }
+
+
+  const titulo =
+    document.createElement(
+      'p'
+    );
+
+
+  titulo.style.fontWeight =
+    '700';
+
+
+  titulo.textContent =
+    '📚 Frases de esta etapa';
+
+
+  cont.appendChild(
+    titulo
+  );
+
+
+
+  frases.forEach(
+    frase => {
+
+      const bloque =
+        document.createElement(
+          'div'
+        );
+
+
+      bloque.style.padding =
+        '0.7rem 0';
+
+
+      bloque.style.borderBottom =
+        '1px solid rgba(0,0,0,0.08)';
+
+
+
+      // INGLÉS
+
+      const ingles =
+        document.createElement(
+          'strong'
+        );
+
+
+      ingles.textContent =
+        frase.ingles || '';
+
+
+
+      // TRADUCCIÓN
+
+      const traduccion =
+        document.createElement(
+          'div'
+        );
+
+
+      traduccion.style.opacity =
+        '0.8';
+
+
+      traduccion.textContent =
+        frase.traduccion || '';
+
+
+
+      bloque.appendChild(
+        ingles
+      );
+
+
+      bloque.appendChild(
+        traduccion
+      );
+
+
+
+      // PRONUNCIACIÓN
+
+      if (
+        frase.pronunciacion
+      ) {
+
+        const pron =
+          document.createElement(
+            'small'
+          );
+
+
+        pron.style.display =
+          'block';
+
+
+        pron.style.opacity =
+          '0.65';
+
+
+        pron.textContent =
+          `🔊 ${frase.pronunciacion}`;
+
+
+        bloque.appendChild(
+          pron
+        );
+
+      }
+
+
+
+      // EXPLICACIÓN
+
+      if (
+        frase.explicacion
+      ) {
+
+        const exp =
+          document.createElement(
+            'small'
+          );
+
+
+        exp.style.display =
+          'block';
+
+
+        exp.style.marginTop =
+          '0.25rem';
+
+
+        exp.textContent =
+          `💡 ${frase.explicacion}`;
+
+
+        bloque.appendChild(
+          exp
+        );
+
+      }
+
+
+      cont.appendChild(
+        bloque
+      );
+
+    }
+  );
+
+}
+
+
+
+// =====================================================
+// MOSTRAR EJERCICIO
+// =====================================================
+
+function mostrarEjercicio() {
+
+  const ejercicios =
+    etapaSeleccionada.ejercicios ||
+    [];
+
+
+  if (!ejercicios.length) {
+
+    mostrarResultadoFinal(
+      'Etapa sin ejercicios'
+    );
+
+    return;
+
+  }
+
+
+  const ejercicio =
+    ejercicios[
+      ejercicioActual
+    ];
+
+
+
+  // ===============================================
+  // PROGRESO
+  // ===============================================
+
+  $('modal-progreso')
+    .textContent =
+    `Ejercicio ${
+      ejercicioActual + 1
+    } de ${
+      ejercicios.length
+    }`;
+
+
+
+  // ===============================================
+  // DATOS
+  // ===============================================
+
+  $('modal-instruccion')
+    .textContent =
+    ejercicio.instruccion ||
+    'Responde correctamente';
+
+
+  $('modal-frase')
+    .textContent =
+    ejercicio.frase_ingles ||
+    '';
+
+
+  $('modal-pregunta')
+    .textContent =
+    ejercicio.pregunta ||
+    '';
+
+
+
+  // ===============================================
+  // LIMPIAR
+  // ===============================================
+
+  $('modal-opciones')
+    .innerHTML =
+    '';
+
+
+  $('orden-seleccion')
+    .textContent =
+    '';
+
+
+  $('orden-confirmar')
+    .style.display =
+    'none';
+
+
+  palabrasSeleccionadas =
+    [];
+
+
+
+  // ===============================================
+  // TIPO DE EJERCICIO
+  // ===============================================
+
+  if (
+    ejercicio.tipo ===
+    'ordenar'
+  ) {
+
+    crearEjercicioOrdenar(
+      ejercicio
+    );
+
+  }
+
+  else if (
+    ejercicio.tipo ===
+      'traduccion' ||
+
+    ejercicio.tipo ===
+      'completar'
+  ) {
+
+    crearEjercicioTexto(
+      ejercicio
+    );
+
+  }
+
+  else {
+
+    crearOpciones(
+      ejercicio
+    );
+
+  }
+
+}
+
+
+
+// =====================================================
+// EJERCICIOS DE SELECCIÓN
+// =====================================================
+
+function crearOpciones(
+  ejercicio
+) {
+
+  const cont =
+    $('modal-opciones');
+
+
+  const opciones =
+    [
+      ...(ejercicio.opciones || [])
+    ];
+
+
+  mezclar(
+    opciones
+  );
+
+
+  opciones.forEach(
+    opcion => {
 
       const btn =
         document.createElement(
@@ -295,67 +916,162 @@ function crearOpcionesNormales(etapa) {
 
       btn.addEventListener(
         'click',
-        () => responder(
-          opcion,
-          btn
-        )
+        () =>
+          responder(
+            opcion,
+            btn
+          )
       );
 
 
-      cont.appendChild(btn);
+      cont.appendChild(
+        btn
+      );
 
     }
   );
+
 }
 
 
+
 // =====================================================
-// EJERCICIO: ORDENAR PALABRAS
+// TRADUCCIÓN / COMPLETAR
 // =====================================================
 
-function crearEjercicioOrdenar(etapa) {
+function crearEjercicioTexto(
+  ejercicio
+) {
 
   const cont =
-    document.getElementById(
-      'modal-opciones'
+    $('modal-opciones');
+
+
+  const input =
+    document.createElement(
+      'input'
     );
 
 
-  // Copiar palabras
-  const palabrasMezcladas =
-    [...etapa.opciones];
+  input.type =
+    'text';
 
 
-  // ===================================================
-  // MEZCLAR PALABRAS
-  // ===================================================
-
-  for (
-    let i = palabrasMezcladas.length - 1;
-    i > 0;
-    i--
-  ) {
-
-    const j =
-      Math.floor(
-        Math.random() * (i + 1)
-      );
+  input.placeholder =
+    'Escribe tu respuesta...';
 
 
+  input.autocomplete =
+    'off';
+
+
+  input.style.width =
+    '100%';
+
+
+  input.style.padding =
+    '0.8rem';
+
+
+  input.style.marginBottom =
+    '0.8rem';
+
+
+
+  const btn =
+    document.createElement(
+      'button'
+    );
+
+
+  btn.className =
+    'btn btn--primary';
+
+
+  btn.textContent =
+    'Comprobar';
+
+
+  btn.addEventListener(
+    'click',
+    () => {
+
+      const respuesta =
+        input.value.trim();
+
+
+      if (respuesta) {
+
+        responder(
+          respuesta,
+          btn
+        );
+
+      }
+
+    }
+  );
+
+
+
+  input.addEventListener(
+    'keydown',
+    event => {
+
+      if (
+        event.key ===
+        'Enter'
+      ) {
+
+        btn.click();
+
+      }
+
+    }
+  );
+
+
+  cont.appendChild(
+    input
+  );
+
+
+  cont.appendChild(
+    btn
+  );
+
+
+  input.focus();
+
+}
+
+
+
+// =====================================================
+// ORDENAR PALABRAS
+// =====================================================
+
+function crearEjercicioOrdenar(
+  ejercicio
+) {
+
+  const cont =
+    $('modal-opciones');
+
+
+  const palabras =
     [
-      palabrasMezcladas[i],
-      palabrasMezcladas[j]
-    ] = [
-      palabrasMezcladas[j],
-      palabrasMezcladas[i]
+      ...(ejercicio.opciones || [])
     ];
 
-  }
+
+  mezclar(
+    palabras
+  );
 
 
-  // Crear botones
-  palabrasMezcladas.forEach(
-    (palabra) => {
+  palabras.forEach(
+    palabra => {
 
       const btn =
         document.createElement(
@@ -381,32 +1097,25 @@ function crearEjercicioOrdenar(etapa) {
       );
 
 
-      cont.appendChild(btn);
+      cont.appendChild(
+        btn
+      );
 
     }
   );
 
 
-  // Mostrar botón comprobar
-  const confirmar =
-    document.getElementById(
-      'orden-confirmar'
-    );
+  $('orden-confirmar')
+    .style.display =
+    'block';
 
 
-  if (confirmar) {
+  $('orden-confirmar')
+    .onclick =
+    confirmarOrden;
 
-    confirmar.style.display =
-      'block';
-
-    confirmar.disabled =
-      false;
-
-    confirmar.onclick =
-      confirmarOrden;
-
-  }
 }
+
 
 
 // =====================================================
@@ -418,8 +1127,9 @@ function seleccionarPalabra(
   boton
 ) {
 
-  // Evitar seleccionar dos veces
-  if (boton.disabled) {
+  if (
+    boton.disabled
+  ) {
 
     return;
 
@@ -431,7 +1141,8 @@ function seleccionarPalabra(
   );
 
 
-  boton.disabled = true;
+  boton.disabled =
+    true;
 
 
   boton.classList.add(
@@ -439,44 +1150,24 @@ function seleccionarPalabra(
   );
 
 
-  actualizarFraseOrdenada();
-}
-
-
-// =====================================================
-// MOSTRAR FRASE ORDENADA
-// =====================================================
-
-function actualizarFraseOrdenada() {
-
-  const seleccion =
-    document.getElementById(
-      'orden-seleccion'
-    );
-
-
-  if (!seleccion) {
-
-    return;
-
-  }
-
-
-  seleccion.textContent =
+  $('orden-seleccion')
+    .textContent =
     palabrasSeleccionadas.join(
       ' '
     );
+
 }
+
 
 
 // =====================================================
 // CONFIRMAR ORDEN
 // =====================================================
 
-async function confirmarOrden() {
+function confirmarOrden() {
 
   if (
-    palabrasSeleccionadas.length === 0
+    !palabrasSeleccionadas.length
   ) {
 
     return;
@@ -490,51 +1181,17 @@ async function confirmarOrden() {
       .trim();
 
 
-  console.log(
-    'Respuesta enviada:',
-    respuesta
-  );
-
-
-  // Desactivar botones
-  const botones =
-    document.querySelectorAll(
-      '#modal-opciones .opcion'
-    );
-
-
-  botones.forEach(
-    (boton) => {
-
-      boton.disabled = true;
-
-    }
-  );
-
-
-  const confirmar =
-    document.getElementById(
-      'orden-confirmar'
-    );
-
-
-  if (confirmar) {
-
-    confirmar.disabled = true;
-
-  }
-
-
-  await enviarRespuesta(
+  responder(
     respuesta,
-    null,
-    botones
+    $('orden-confirmar')
   );
+
 }
 
 
+
 // =====================================================
-// RESPONDER OPCIONES NORMALES
+// RESPONDER
 // =====================================================
 
 async function responder(
@@ -544,37 +1201,19 @@ async function responder(
 
   const botones =
     document.querySelectorAll(
-      '#modal-opciones .opcion'
+      '#modal-opciones button'
     );
 
 
-  // Desactivar todas
   botones.forEach(
-    (boton) => {
+    boton => {
 
-      boton.disabled = true;
+      boton.disabled =
+        true;
 
     }
   );
 
-
-  await enviarRespuesta(
-    respuesta,
-    btnElegido,
-    botones
-  );
-}
-
-
-// =====================================================
-// ENVIAR RESPUESTA AL SERVIDOR
-// =====================================================
-
-async function enviarRespuesta(
-  respuesta,
-  btnElegido,
-  botones
-) {
 
   try {
 
@@ -582,14 +1221,18 @@ async function enviarRespuesta(
       await fetch(
         '/api/caminito/completar',
         {
-          method: 'POST',
+
+          method:
+            'POST',
 
           headers: {
+
             'Content-Type':
               'application/json',
 
             Authorization:
               `Bearer ${token}`
+
           },
 
           body:
@@ -601,32 +1244,44 @@ async function enviarRespuesta(
               etapaId:
                 etapaSeleccionada.etapa_id,
 
+              ejercicioIndex:
+                ejercicioActual,
+
               respuesta:
                 respuesta
 
             })
 
-          }
-        );
+        }
+      );
 
 
     const data =
       await resp.json();
 
 
-    console.log(
-      'Respuesta del servidor:',
-      data
-    );
+    if (!resp.ok) {
+
+      throw new Error(
+        data.error ||
+        'Error al comprobar'
+      );
+
+    }
 
 
-    // =================================================
-    // RESPUESTA CORRECTA
-    // =================================================
 
-    if (data.correcta) {
+    // =============================================
+    // CORRECTA
+    // =============================================
 
-      if (btnElegido) {
+    if (
+      data.correcta
+    ) {
+
+      if (
+        btnElegido?.classList
+      ) {
 
         btnElegido.classList.add(
           'correcta'
@@ -635,18 +1290,24 @@ async function enviarRespuesta(
       }
 
 
-      mostrarResultado();
+      mostrarResultadoEjercicio(
+        data
+      );
+
 
       return;
 
     }
 
 
-    // =================================================
-    // RESPUESTA INCORRECTA
-    // =================================================
 
-    if (btnElegido) {
+    // =============================================
+    // INCORRECTA
+    // =============================================
+
+    if (
+      btnElegido?.classList
+    ) {
 
       btnElegido.classList.add(
         'incorrecta'
@@ -655,57 +1316,53 @@ async function enviarRespuesta(
     }
 
 
-    // Si es ordenar
-    if (
-      etapaSeleccionada &&
-      etapaSeleccionada.tipo ===
-        'ordenar'
-    ) {
+    mostrarErrorRespuesta(
+      data.mensaje ||
+      'Respuesta incorrecta'
+    );
 
-      setTimeout(
-        () => {
 
-          resetearOrden();
+    setTimeout(
+      () => {
 
-        },
-        900
-      );
+        botones.forEach(
+          boton => {
 
-    }
+            boton.disabled =
+              false;
 
-    // Si es una pregunta normal
-    else {
+            boton.classList.remove(
+              'incorrecta'
+            );
 
-      setTimeout(
-        () => {
+          }
+        );
 
-          botones.forEach(
-            (boton) => {
 
-              boton.disabled =
-                false;
+        if (
+          btnElegido
+        ) {
 
-            }
+          btnElegido.classList.remove(
+            'incorrecta'
           );
 
-        },
-        900
-      );
+        }
 
-    }
+      },
+      900
+    );
 
 
   } catch (error) {
 
     console.error(
-      'Error enviando respuesta:',
       error
     );
 
 
-    // Reactivar botones
     botones.forEach(
-      (boton) => {
+      boton => {
 
         boton.disabled =
           false;
@@ -714,154 +1371,293 @@ async function enviarRespuesta(
     );
 
 
-    const confirmar =
-      document.getElementById(
-        'orden-confirmar'
-      );
-
-
-    if (confirmar) {
-
-      confirmar.disabled =
-        false;
-
-    }
+    alert(
+      error.message
+    );
 
   }
+
 }
 
 
+
 // =====================================================
-// REINICIAR EJERCICIO DE ORDENAR
+// MENSAJE ERROR
 // =====================================================
 
-function resetearOrden() {
+function mostrarErrorRespuesta(
+  mensaje
+) {
 
-  palabrasSeleccionadas = [];
+  $('modal-instruccion')
+    .textContent =
+    `❌ ${mensaje}. Inténtalo nuevamente.`;
 
-
-  const seleccion =
-    document.getElementById(
-      'orden-seleccion'
-    );
-
-
-  if (seleccion) {
-
-    seleccion.textContent =
-      '';
-
-  }
-
-
-  const botones =
-    document.querySelectorAll(
-      '#modal-opciones .opcion'
-    );
-
-
-  botones.forEach(
-    (boton) => {
-
-      boton.disabled =
-        false;
-
-
-      boton.classList.remove(
-        'incorrecta'
-      );
-
-
-      boton.classList.remove(
-        'correcta'
-      );
-
-
-      boton.classList.remove(
-        'seleccionada'
-      );
-
-    }
-  );
-
-
-  const confirmar =
-    document.getElementById(
-      'orden-confirmar'
-    );
-
-
-  if (confirmar) {
-
-    confirmar.disabled =
-      false;
-
-  }
 }
 
 
+
 // =====================================================
-// MOSTRAR RESULTADO
+// RESULTADO DEL EJERCICIO
 // =====================================================
 
-function mostrarResultado() {
+function mostrarResultadoEjercicio(
+  data
+) {
 
-  const etapa =
-    etapaSeleccionada;
+  const ejercicio =
+    etapaSeleccionada.ejercicios[
+      ejercicioActual
+    ];
 
 
-  // Ocultar pregunta
-  document.getElementById(
-    'pantalla-pregunta'
-  ).style.display =
+  $('pantalla-pregunta')
+    .style.display =
     'none';
 
 
-  // Mostrar resultado
-  const resultado =
-    document.getElementById(
-      'pantalla-resultado'
-    );
-
-
-  resultado.style.display =
+  $('pantalla-resultado')
+    .style.display =
     'block';
 
 
-  // Título
-  document.getElementById(
-    'resultado-titulo'
-  ).textContent =
-    '🎉 ¡Correcto!';
+
+  // ===============================================
+  // TÍTULO
+  // ===============================================
+
+  $('resultado-titulo')
+    .textContent =
+
+      data.etapaCompleta
+
+        ? '🏆 ¡Etapa dominada!'
+
+        : '🎉 ¡Correcto!';
 
 
-  // Inglés
-  document.getElementById(
-    'resultado-ingles'
-  ).textContent =
-    etapa.frase_ingles ||
-    '';
+
+  // ===============================================
+  // INGLÉS
+  // ===============================================
+
+  $('resultado-ingles')
+    .textContent =
+
+      data.resultado?.ingles ||
+
+      ejercicio.frase_ingles ||
+
+      '';
 
 
-  // Traducción
-  document.getElementById(
-    'resultado-traduccion'
-  ).textContent =
-    etapa.frase_traduccion ||
-    '';
+
+  // ===============================================
+  // TRADUCCIÓN
+  // ===============================================
+
+  $('resultado-traduccion')
+    .textContent =
+
+      data.resultado?.traduccion ||
+
+      ejercicio.frase_traduccion ||
+
+      '';
 
 
-  // Explicación
-  document.getElementById(
-    'resultado-explicacion'
-  ).textContent =
-    etapa.explicacion ||
-    '¡Muy bien! Has respondido correctamente.';
+
+  // ===============================================
+  // EXPLICACIÓN
+  // ===============================================
+
+  $('resultado-explicacion')
+    .textContent =
+
+      data.resultado?.explicacion ||
+
+      ejercicio.explicacion ||
+
+      '¡Muy bien!';
 
 
-  // Confeti
+
   lanzarConfeti();
+
+
+
+  // ===============================================
+  // BOTÓN
+  // ===============================================
+
+  $('btn-continuar')
+    .textContent =
+
+      data.etapaCompleta
+
+        ? (
+            data.nivelCompleto
+              ? 'Continuar →'
+              : 'Siguiente etapa →'
+          )
+
+        : 'Siguiente ejercicio →';
+
+
+
+  $('btn-continuar')
+    .onclick =
+    () => {
+
+
+      // =========================================
+      // TERMINÓ LA ETAPA
+      // =========================================
+
+      if (
+        data.etapaCompleta
+      ) {
+
+        cerrarModal();
+
+
+        if (
+          data.nivelActual
+        ) {
+
+          nivelActual =
+            Number(
+              data.nivelActual
+            );
+
+
+          usuario.nivel_actual =
+            nivelActual;
+
+
+          localStorage.setItem(
+            'usuario',
+            JSON.stringify(
+              usuario
+            )
+          );
+
+
+          $('badge-nivel')
+            .textContent =
+            `Nivel ${nivelActual}`;
+
+        }
+
+
+        cargarCaminito();
+
+        return;
+
+      }
+
+
+
+      // =========================================
+      // SIGUIENTE EJERCICIO
+      // =========================================
+
+      ejercicioActual++;
+
+
+      $('pantalla-resultado')
+        .style.display =
+        'none';
+
+
+      $('pantalla-pregunta')
+        .style.display =
+        'block';
+
+
+      mostrarEjercicio();
+
+    };
+
 }
+
+
+
+// =====================================================
+// RESULTADO FINAL
+// =====================================================
+
+function mostrarResultadoFinal(
+  titulo
+) {
+
+  $('pantalla-pregunta')
+    .style.display =
+    'none';
+
+
+  $('pantalla-resultado')
+    .style.display =
+    'block';
+
+
+  $('resultado-titulo')
+    .textContent =
+    titulo;
+
+
+  $('resultado-ingles')
+    .textContent =
+    '';
+
+
+  $('resultado-traduccion')
+    .textContent =
+    '';
+
+
+  $('resultado-explicacion')
+    .textContent =
+    'No hay ejercicios disponibles.';
+
+}
+
+
+
+// =====================================================
+// MEZCLAR ARRAY
+// =====================================================
+
+function mezclar(
+  array
+) {
+
+  for (
+    let i = array.length - 1;
+    i > 0;
+    i--
+  ) {
+
+    const j =
+      Math.floor(
+        Math.random() *
+        (i + 1)
+      );
+
+
+    [
+      array[i],
+      array[j]
+    ] =
+    [
+      array[j],
+      array[i]
+    ];
+
+  }
+
+}
+
 
 
 // =====================================================
@@ -871,9 +1667,7 @@ function mostrarResultado() {
 function lanzarConfeti() {
 
   const contenedor =
-    document.getElementById(
-      'confeti'
-    );
+    $('confeti');
 
 
   if (!contenedor) {
@@ -887,13 +1681,9 @@ function lanzarConfeti() {
     '';
 
 
-  const cantidad =
-    35;
-
-
   for (
     let i = 0;
-    i < cantidad;
+    i < 35;
     i++
   ) {
 
@@ -924,11 +1714,13 @@ function lanzarConfeti() {
     );
 
   }
+
 }
 
 
+
 // =====================================================
-// COLORES DEL CONFETI
+// COLORES CONFETI
 // =====================================================
 
 function obtenerColorConfeti() {
@@ -956,29 +1748,9 @@ function obtenerColorConfeti() {
       colores.length
     )
   ];
+
 }
 
-
-// =====================================================
-// CONTINUAR DESPUÉS DEL RESULTADO
-// =====================================================
-
-document
-  .getElementById(
-    'btn-continuar'
-  )
-  .addEventListener(
-    'click',
-    continuarDespuesDeResultado
-  );
-
-
-function continuarDespuesDeResultado() {
-
-  cerrarModal();
-
-  cargarCaminito();
-}
 
 
 // =====================================================
@@ -987,18 +1759,29 @@ function continuarDespuesDeResultado() {
 
 function cerrarModal() {
 
-  document
-    .getElementById(
-      'modal-overlay'
-    )
+  $('modal-overlay')
     .classList.remove(
       'activo'
     );
 
 
-  document.getElementById(
-    'modal-opciones'
-  ).innerHTML =
+  $('pantalla-pregunta')
+    .style.display =
+    'block';
+
+
+  $('pantalla-resultado')
+    .style.display =
+    'none';
+
+
+  $('modal-opciones')
+    .innerHTML =
+    '';
+
+
+  $('frases-aprendizaje')
+    .innerHTML =
     '';
 
 
@@ -1006,45 +1789,46 @@ function cerrarModal() {
     [];
 
 
-  const seleccion =
-    document.getElementById(
-      'orden-seleccion'
-    );
+  etapaSeleccionada =
+    null;
 
-
-  if (seleccion) {
-
-    seleccion.textContent =
-      '';
-
-  }
-
-
-  document.getElementById(
-    'pantalla-pregunta'
-  ).style.display =
-    'block';
-
-
-  document.getElementById(
-    'pantalla-resultado'
-  ).style.display =
-    'none';
 }
+
 
 
 // =====================================================
 // BOTÓN CERRAR
 // =====================================================
 
-document
-  .getElementById(
-    'modal-cerrar'
-  )
+$('modal-cerrar')
   .addEventListener(
     'click',
     cerrarModal
   );
+
+
+
+// =====================================================
+// CERRAR HACIENDO CLICK FUERA
+// =====================================================
+
+$('modal-overlay')
+  .addEventListener(
+    'click',
+    event => {
+
+      if (
+        event.target ===
+        $('modal-overlay')
+      ) {
+
+        cerrarModal();
+
+      }
+
+    }
+  );
+
 
 
 // =====================================================
